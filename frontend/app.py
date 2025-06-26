@@ -1,16 +1,13 @@
-# frontend/app.py
-import streamlit as st
+mport streamlit as st
 import pyrebase
 import requests
 import virtualassistant
 from datetime import datetime
+import re
 st.set_page_config(page_title="EduTutor AI", layout="wide")
-
 # Firebase config
 firebaseConfig = {
-   #replace with your firebase config details
 }
-
 firebase = pyrebase.initialize_app(firebaseConfig)
 auth = firebase.auth()
 db = firebase.database()
@@ -24,7 +21,6 @@ if "role" not in st.session_state:
     st.session_state["role"] = ""
 if "name" not in st.session_state:
     st.session_state["name"] = ""
-
 # -------------------- UI --------------------
 st.title("📘 EduTutor AI")
 
@@ -47,7 +43,6 @@ if not st.session_state["is_logged_in"]:
                     "role": role,
                     "name": name
                 })
-
                 st.success("✅ Account created successfully! Please log in.")
             except Exception as e:
                 st.error(f"❌ Signup failed: {e}")
@@ -96,6 +91,10 @@ else:
         st.session_state["page"] = "Student History"
     if st.sidebar.button("📜 Chat History"):
         st.session_state["page"] = "Chat History"
+    if st.sidebar.button("💡 AI Summarizer"):
+        st.session_state["page"] = "AI Summarizer"
+    if st.sidebar.button("🧠 AI Flashcards"):
+        st.session_state["page"] ="AI Flashcards"
     if st.sidebar.button("🚪 Logout"):
         st.session_state["is_logged_in"] = False
         st.session_state["user"] = None
@@ -103,31 +102,24 @@ else:
         st.session_state["name"] = ""
         st.session_state["page"] = "Dashboard"
         st.rerun()
-
     # ---------------- Main Content ----------------
-
     if st.session_state["page"] == "Dashboard":
         st.header("📘 Dashboard")
         if st.session_state["role"] == "Student":
             st.success("🎓 You are logged in as a student.")
         elif st.session_state["role"] == "Teacher":
             st.success("📚 You are logged in as a teacher.")
-
     elif st.session_state["page"] == "Virtual Assistant":
         st.header("🤖 EduTutor AI - Virtual Assistant")
         st.write("Ask your study-related questions here...")
-
         user_input = st.text_area("💬 Ask a question:")
         if st.button("Get Answer") and user_input.strip():
             with st.spinner("Thinking..."):
                 response = virtualassistant.ask_tutor(user_input)
-
             st.success("✅ Answer")
             st.write(response)
-
             # 🔽 Save chat to backend
             import requests
-
             def save_chat_to_backend(uid, question, answer):
                 url = "http://localhost:8000/save-chat-history"
                 payload = {"uid": uid, "question": question, "answer": answer}
@@ -139,22 +131,14 @@ else:
             if "user" in st.session_state and st.session_state["user"]:
                 uid = st.session_state["user"]["localId"]
                 save_chat_to_backend(uid, user_input, response)
-
-
-
 # Only run this block for the Quiz Generator page
     elif st.session_state["page"] == "Quiz Generator":
-
-        
-
         st.title("🧠 Edu Tutor AI -  Quiz Generator")
         st.markdown("Generate a 10-question quiz based on your topic and difficulty level.")
-
         # Inputs
         uid = st.session_state["user"]["localId"]
         topic = st.text_input("Enter quiz topic", "Recursion")
         difficulty = st.selectbox("Select difficulty", ["easy", "medium", "hard"])
-
         # Session state
         if "quiz" not in st.session_state:
             st.session_state.quiz = []
@@ -162,7 +146,6 @@ else:
             st.session_state.submitted = False
         if "user_answers" not in st.session_state:
             st.session_state.user_answers = {}
-
         # Generate Quiz
         if st.button("🎯 Generate Quiz"):
             if not uid or not topic:
@@ -187,7 +170,6 @@ else:
                             st.error(f"Failed to generate quiz: {response.json()['detail']}")
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
-
         # Quiz UI
         if st.session_state.quiz and not st.session_state.submitted:
             st.subheader("📝 Attempt the Quiz")
@@ -206,26 +188,21 @@ else:
                     st.warning("Please answer all questions before submitting.")
                 else:
                     st.session_state.submitted = True
-
                     # Calculate result and prepare data
                     correct = 0
                     quiz_result = []
-
                     for i, q in enumerate(st.session_state.quiz):
                         user_ans = st.session_state.user_answers.get(i)
                         correct_ans = q["answer"]
                         if user_ans == correct_ans:
                             correct += 1
-
                         quiz_result.append({
                             "question": q["question"],
                             "options": q["options"],
                             "answer": correct_ans,
                             "user_answer": user_ans
                         })
-
                     timestamp = datetime.now().isoformat()
-
                     history_payload = {
                         "uid": uid,
                         "topic": topic,
@@ -235,7 +212,6 @@ else:
                         "timestamp": timestamp,
                         "quiz": quiz_result
                     }
-
                     try:
                         save_resp = requests.post(
                             "http://localhost:8000/save-quiz-history",
@@ -247,17 +223,14 @@ else:
                             st.error("❌ Failed to save quiz history.")
                     except Exception as e:
                         st.error(f"Error saving quiz history: {str(e)}")
-
         # Show results
         if st.session_state.quiz and st.session_state.submitted:
             st.subheader("📊 Quiz Results")
             correct = 0
-
             for i, q in enumerate(st.session_state.quiz):
                 correct_ans = q["answer"]
                 selected = st.session_state.user_answers.get(i, "")
                 is_correct = (selected == correct_ans)
-
                 st.markdown(f"**Q{i+1}. {q['question']}**")
                 for opt_key, opt_val in q["options"].items():
                     label = f"{opt_key}. {opt_val}"
@@ -269,14 +242,10 @@ else:
                         st.error(f"❌ {label} (Your Answer)")
                     else:
                         st.write(label)
-
                 st.markdown("---")
                 if is_correct:
                     correct += 1
-
             st.info(f"🏁 You scored **{correct} out of 10**.")
-
-
 
     elif st.session_state["page"] == "Student History" :
         st.header("📊  student Quiz History")
@@ -284,13 +253,8 @@ else:
         import streamlit as st
         import requests
         from datetime import datetime
-
-
-
         st.title("📘 Your Quiz History")
-
         uid = st.session_state["user"]["localId"]
-
         try:
             with st.spinner("Fetching quiz history..."):
                 res = requests.get(f"http://localhost:8000/student-history?uid={uid}")
@@ -318,7 +282,6 @@ else:
                     st.error("❌ Failed to load quiz history.")
         except Exception as e:
             st.error(f"Error: {str(e)}")
-
     elif st.session_state["page"] == "Chat History":
         st.header("📜 Your Chat History")
         with st.spinner("Loading Previous chat... please wait"):
@@ -343,3 +306,67 @@ else:
                     st.error("Failed to load chat history.")
             except Exception as e:
                 st.error(f"⚠️ Error fetching chat history: {e}")
+    elif st.session_state["page"] == "AI Summarizer":
+        API_BASE = "http://localhost:8000"  # Change if deployed
+        st.header("🤖 EduTutor AI - AI Summarizer")
+        st.write("Paste your notes below and get a concise 5-point summary!")
+        user_notes = st.text_area("✍️ Enter your study notes here")
+        if st.button("Summarize"):
+                if not user_notes.strip():
+                    st.warning("Please enter some text to summarize.")
+                else:
+                    with st.spinner("Generating summary..."):
+                        try:
+                            response = requests.post(
+                                f"http://localhost:8000/summarize-notes",
+                                json={"notes": user_notes}
+                            )
+                            if response.status_code == 200:
+                                raw_summary = response.json()["summary"]
+                                # 🧹 Clean and standardize the summary
+                                import re
+                                raw_lines = re.findall(r'\d+\.\s+.*?(?=\n\d+\.|\Z)', raw_summary.strip(), re.DOTALL)
+                                seen = set()
+                                cleaned = []
+                                for line in raw_lines:
+                                    sentence = re.sub(r'\s+', ' ', line.strip())  # normalize whitespace
+                                    if sentence not in seen and len(sentence.split()) > 3:
+                                        cleaned.append(sentence)
+                                        seen.add(sentence)
+                                # ✅ Display final cleaned summary (max 7 points)
+                                st.success("Here’s your summary:")
+                                for i, point in enumerate(cleaned[:7], start=1):
+                                    # Remove previous numbering and reformat
+                                    content = re.sub(r'^\d+\.\s*', '', point)
+                                    st.markdown(f"✅👉 **{i}. {content}**")
+                            else:
+                                st.error(f"Error: {response.text}")
+                        except Exception as e:
+                            st.error(f"Request failed: {e}")
+    elif st.session_state["page"] == "AI Flashcards":
+        st.header("🧠 EduTutor AI - Flashcard Generator")
+        st.write("Turn your study notes into interactive flashcards!")
+        API_BASE = "http://localhost:8000"
+        user_notes = st.text_area("📚 Paste your study notes here")
+        if st.button("Generate Flashcards"):
+            if not user_notes.strip():
+                st.warning("Please enter some notes.")
+            else:
+                with st.spinner("Generating flashcards..."):
+                    try:
+                        response = requests.post(
+                            f"{API_BASE}/generate-flashcards",
+                            json={"notes": user_notes}
+                        )
+                        if response.status_code == 200:
+                            flashcards_raw = response.json()["flashcards"]
+                            # Extract Q&A pairs
+                            pairs = re.findall(r"Q:\s*(.*?)\nA:\s*(.*?)(?=\nQ:|\Z)", flashcards_raw, re.DOTALL)
+                            st.success("Here are your flashcards:")
+                            for i, (q, a) in enumerate(pairs, 1):
+                                with st.expander(f"Flashcard {i}: {q.strip()}"):
+                                    st.write(f"**Answer:** {a.strip()}")
+                        else:
+                            st.error(f"Error: {response.text}")
+                    except Exception as e:
+                        st.error(f"Request failed: {e}")
