@@ -8,7 +8,6 @@ import firebase_admin
 from firebase_admin import credentials, db
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
-
 # Firebase init (use your JSON credentials)
 #create a service account in firebase 
 cred = credentials.Certificate("?Your serviceAccountKey.json")
@@ -61,6 +60,11 @@ class QuizHistoryRequest(BaseModel):
     difficulty: str
     timestamp: str
     quiz: List[Question]  # List of 10 questions with user answers
+class NotesRequest(BaseModel):
+    notes: str
+class FlashcardRequest(BaseModel):
+    notes: str
+
 # IBM Granite API configuration
 API_KEY = "Replace With your IBM API KEY"
 MODEL_ID = "ibm/granite-3-2b-instruct"
@@ -257,3 +261,93 @@ def get_quiz_history(uid: str):
         return {"message": "No quiz history found."}
     except Exception as e:
         return {"error": str(e)}
+
+def clean_summary(text: str) -> str:
+    # Remove bullets like ✅, dashes, etc.
+    text = re.sub(r'✅|\s*-\s*', '', text)
+
+    # Extract lines that look like numbered points
+    lines = re.findall(r'(?:^\d{1,2}\.\s.*?$)', text, flags=re.MULTILINE)
+
+    # Re-number them properly
+    cleaned = ""
+    for idx, line in enumerate(lines, start=1):
+        content = re.sub(r'^\d{1,2}\.\s*', '', line)
+        cleaned += f"{idx}. {content.strip()}\n"
+
+    return cleaned.strip()
+
+@app.post("/summarize-notes")
+def summarize_notes(req: NotesRequest):
+    token = get_iam_token(API_KEY)
+
+    # Improved prompt to guide clean output
+    prompt = (
+        "Summarize the following text into exactly 5 to 7 clear and concise points. "
+        "Each point should be numbered like 1., 2., 3. Do not include emojis or bullets.\n\n"
+        f"{req.notes}"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    data = {
+        "model_id": MODEL_ID,
+        "input": prompt.strip(),
+        "parameters": {
+            "max_new_tokens": 300,
+            "temperature": 0.5
+        },
+        "project_id": PROJECT_ID
+    }
+
+    response = requests.post(ENDPOINT, headers=headers, json=data)
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    try:
+        summary_raw = response.json()["results"][0]["generated_text"]
+        summary_cleaned = clean_summary(summary_raw)
+        return {"summary": summary_cleaned}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected response format from IBM Granite.")
+
+@app.post("/generate-flashcards")
+def generate_flashcards(req: FlashcardRequest):
+    token = get_iam_token(API_KEY)
+
+    prompt = (
+        "From the following study notes, generate 5 question-answer flashcards. "
+        "Each flashcard should be numbered and follow this format:\n\n"
+        "Q: <Question>\nA: <Answer>\n\n"
+        f"{req.notes}"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    data = {
+        "model_id": MODEL_ID,
+        "input": prompt.strip(),
+        "parameters": {
+            "max_new_tokens": 400,
+            "temperature": 0.5
+        },
+        "project_id": PROJECT_ID
+    }
+
+    response = requests.post(ENDPOINT, headers=headers, json=data)
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    try:
+        result = response.json()["results"][0]["generated_text"]
+        return {"flashcards": result.strip()}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Unexpected flashcard format.")
