@@ -68,6 +68,8 @@ Endpoint	Description
 /generate-flashcards	Create flashcards from input text
 
 ✨ How to Run
+
+
 1️⃣ Clone the repository
 
 bash
@@ -75,12 +77,16 @@ Copy
 Edit
 git clone https://github.com/KarthikMathineni/Edututor-AI.git
 cd Edututor-AI
+
+
 2️⃣ Install dependencies
 
 bash
 Copy
 Edit
 pip install -r requirements.txt
+
+
 3️⃣ Set up environment variables
 
 Firebase credentials
@@ -95,6 +101,8 @@ bash
 Copy
 Edit
 uvicorn main:app --reload
+
+
 5️⃣ Launch the Streamlit frontend
 
 bash
