@@ -51,6 +51,8 @@ Sidebar navigation with icons
 Clean, responsive layout
 
 🛠️ Tech Stack
+
+
 Backend: FastAPI
 
 Frontend: Streamlit
