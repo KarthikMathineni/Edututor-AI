@@ -110,8 +110,9 @@ Analytics dashboard for teachers and admins
 
 Gamification for student engagement
 
-📄 License
-This project is licensed under the MIT License.
+👤 Author
+Karthik Mathineni
+GitHub Profile
 
 🙏 Acknowledgments
 
