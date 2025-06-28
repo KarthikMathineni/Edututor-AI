@@ -1,10 +1,9 @@
-:
-
 📘 EduTutor AI
 EduTutor AI is an AI-powered education platform that empowers students and teachers with intelligent tools for learning, assessment, and knowledge reinforcement.
 Built with FastAPI, Streamlit, and Firebase, it delivers an interactive and modern experience, combining dynamic quiz generation, virtual assistance, summarization, and flashcards—all powered by cutting-edge language models.
 
 🚀 Features
+
 ✅ Student & Teacher Authentication
 
 Sign up and log in securely using Firebase Authentication
